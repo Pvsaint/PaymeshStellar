@@ -1,101 +1,71 @@
-import React from 'react';
+import React, { useId } from 'react';
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  /** Input field type — controls keyboard, validation, and browser behaviour */
-  type?: 'text' | 'email' | 'password' | 'number';
-  /** Visible label rendered above the input and linked via htmlFor */
+type InputType = 'text' | 'email' | 'password' | 'number';
+
+interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
+  /** HTML input type. Defaults to 'text' */
+  type?: InputType;
+  /** Optional label rendered above the input, linked via htmlFor/id */
   label?: string;
-  /** Unique id used to associate the label and input for accessibility */
-  id?: string;
-  /** Validation error message displayed below the input in red */
+  /** Validation error message. When present, the input switches to its error style */
   error?: string;
-  /** Optional hint or guidance rendered below the input when there is no error */
+  /** Additional guidance rendered below the input. Hidden while an error is shown */
   helpText?: string;
-  /** Additional CSS classes applied to the outermost wrapper */
-  className?: string;
 }
 
 /**
- * Input — a reusable, accessible form input component for the PaymeshStellar
- * frontend. Supports text, email, password, and number types, with optional
- * label, error, and help-text slots, styled with Tailwind CSS.
+ * Input — a reusable, accessible form field for text, email, password, and
+ * number values, with label, error, and help text support.
  *
- * Usage:
- * ```tsx
- * <Input
- *   id="wallet-address"
- *   label="Wallet Address"
- *   type="text"
- *   placeholder="G…"
- *   helpText="Your Stellar public key."
- *   error={errors.walletAddress}
- * />
- * ```
+ * Forwards all native <input> attributes (value, onChange, placeholder,
+ * required, disabled, etc.) via props spreading.
  */
 export default function Input({
   type = 'text',
   label,
-  id,
   error,
   helpText,
+  id,
   className = '',
-  disabled,
   ...props
 }: InputProps) {
-  // Derive a stable id from the label when none is provided, so the
-  // label's htmlFor always resolves to a matching input id.
-  const inputId = id ?? (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
+  const errorId = error ? `${inputId}-error` : undefined;
+  const helpTextId = helpText ? `${inputId}-help-text` : undefined;
 
-  const baseInput = [
-    'block w-full rounded-lg border px-3 py-2 text-sm outline-none',
-    'transition-colors duration-150',
-    'placeholder:text-gray-400 dark:placeholder:text-gray-500',
-    'bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-50',
-    'focus:ring-2 focus:ring-offset-0',
-  ].join(' ');
+  const base =
+    'w-full rounded-lg border px-4 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
 
   const stateClasses = error
-    ? 'border-red-500 focus:border-red-500 focus:ring-red-300 dark:border-red-500 dark:focus:ring-red-700'
-    : 'border-gray-300 focus:border-blue-500 focus:ring-blue-300 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-700';
-
-  const disabledClasses = disabled
-    ? 'cursor-not-allowed opacity-50 bg-gray-100 dark:bg-gray-800'
-    : '';
-
-  // Derive unique ids for aria-describedby so screen readers announce the
-  // error or help text alongside the input.
-  const errorId = inputId ? `${inputId}-error` : undefined;
-  const helpId = inputId ? `${inputId}-help` : undefined;
-  const describedBy = error ? errorId : helpText ? helpId : undefined;
+    ? 'border-red-500 text-red-900 placeholder-red-300 focus:ring-red-500 dark:text-red-100'
+    : 'border-gray-300 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-50';
 
   return (
-    <div className={`flex flex-col gap-1 ${className}`}>
+    <div className="flex flex-col gap-1">
       {label && (
         <label htmlFor={inputId} className="text-sm font-medium text-gray-700 dark:text-gray-300">
           {label}
         </label>
       )}
-
       <input
         id={inputId}
         type={type}
-        disabled={disabled}
+        className={`${base} ${stateClasses} ${className}`}
         aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy}
-        className={`${baseInput} ${stateClasses} ${disabledClasses}`}
+        aria-describedby={[errorId, helpTextId].filter(Boolean).join(' ') || undefined}
         {...props}
       />
-
-      {error && (
-        <p id={errorId} role="alert" className="text-xs font-medium text-red-600 dark:text-red-400">
+      {error ? (
+        <p id={errorId} className="text-sm text-red-600" role="alert">
           {error}
         </p>
-      )}
-
-      {!error && helpText && (
-        <p id={helpId} className="text-xs text-gray-500 dark:text-gray-400">
-          {helpText}
-        </p>
+      ) : (
+        helpText && (
+          <p id={helpTextId} className="text-sm text-gray-500 dark:text-gray-400">
+            {helpText}
+          </p>
+        )
       )}
     </div>
   );
