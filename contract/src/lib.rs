@@ -224,7 +224,11 @@ mod contract_impl {
 
             for (i, member) in details.members.iter().enumerate() {
                 let share = shares.get(i as u32).unwrap();
-                token_client.transfer(&from, &member.address, &share);
+                // Skip zero-value transfers: they move no tokens but still cost
+                // resource fees as a cross-contract call.
+                if share > 0 {
+                    token_client.transfer(&from, &member.address, &share);
+                }
             }
 
             events::distributed(&env, &id, &from, amount);
